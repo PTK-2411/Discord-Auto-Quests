@@ -1170,7 +1170,7 @@ async function checkForUpdates() {
     if (res && res.ok) {
       const data = await res.json();
       if (data && data.version) {
-        latestVersion = data.version;
+        latestVersion = String(data.version).trim().replace(/^[vV]/, '');
       }
     }
   } catch (err) {
@@ -1187,7 +1187,7 @@ async function checkForUpdates() {
       if (res && res.ok) {
         const data = await res.json();
         if (data && data.tag_name) {
-          latestVersion = data.tag_name.replace(/^[vV]/, '');
+          latestVersion = String(data.tag_name).trim().replace(/^[vV]/, '');
         }
       }
     } catch (err) {
@@ -1236,6 +1236,17 @@ function setupUpdateAlarm() {
     } catch (e) {
       console.warn('[AutoUpdate] Alarms create error:', e);
     }
+  }
+}
+
+// Ensure update alarm exists even after worker wake without onInstalled/onStartup
+if (typeof chrome !== 'undefined' && chrome.alarms && chrome.alarms.get) {
+  try {
+    chrome.alarms.get(UPDATE_CHECK_ALARM, (existing) => {
+      if (!existing) setupUpdateAlarm();
+    });
+  } catch (e) {
+    // Ignore in non-alarm test environments
   }
 }
 
@@ -1515,6 +1526,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             responded = true;
             if (typeof chrome !== 'undefined' && chrome.runtime?.lastError) {
               sendResponse({ success: false, error: chrome.runtime.lastError.message });
+            } else if (downloadId === undefined) {
+              sendResponse({ success: false, error: 'Download failed to initiate' });
             } else {
               addLog(msg(`📥 Downloading update package: ${filename}...`, `📥 Đang tải gói cập nhật: ${filename}...`));
               sendResponse({ success: true, downloadId, filename });
@@ -1526,8 +1539,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           result.then(downloadId => {
             if (!responded) {
               responded = true;
-              addLog(msg(`📥 Downloading update package: ${filename}...`, `📥 Đang tải gói cập nhật: ${filename}...`));
-              sendResponse({ success: true, downloadId, filename });
+              if (downloadId === undefined) {
+                sendResponse({ success: false, error: 'Download failed to initiate' });
+              } else {
+                addLog(msg(`📥 Downloading update package: ${filename}...`, `📥 Đang tải gói cập nhật: ${filename}...`));
+                sendResponse({ success: true, downloadId, filename });
+              }
             }
           }).catch(err => {
             if (!responded) {

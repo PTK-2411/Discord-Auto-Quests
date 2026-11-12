@@ -622,4 +622,37 @@ test('Tier 1 & Tier 2 - F8: GitHub Auto-Update Engine & Popup Banner UI', async 
     assert.equal(popup.elements.btnAcceptUpdate.textContent, 'Update Now');
     assert.equal(popup.elements.btnDismissUpdate.textContent, 'Later');
   });
+
+  await t.test('T2.F8.5: Stale updateState with older/equal remote version suppresses update banner', () => {
+    const popup = createPopupSandbox({ manifestVersion: '2.4.0' });
+
+    // Stale storage has updateAvailable: true from previous session when manifest was 2.3.0
+    const staleUpdateState = {
+      updateAvailable: true,
+      currentVersion: '2.3.0',
+      latestVersion: '2.4.0',
+      downloadUrl: 'https://github.com/PTK-2411/Discord-Auto-Quests/archive/refs/heads/main.zip'
+    };
+
+    popup.sandbox.renderUpdateBanner(staleUpdateState);
+    assert.equal(popup.elements.updateBanner.classList.contains('hidden'), true, 'Banner must remain hidden when current version >= latest');
+  });
+
+  await t.test('T2.F8.6: DOWNLOAD_UPDATE failure when downloadId is undefined is handled gracefully', async () => {
+    const bg = createBackgroundSandbox({
+      downloadsDownloadOverride: (opts, cb) => {
+        if (cb) cb(undefined);
+        return Promise.resolve(undefined);
+      }
+    });
+
+    const response = await bg.triggerMessage({
+      action: 'DOWNLOAD_UPDATE',
+      version: '2.5.0'
+    });
+
+    assert.ok(response);
+    assert.equal(response.success, false);
+    assert.ok(response.error.includes('Download failed to initiate'));
+  });
 });

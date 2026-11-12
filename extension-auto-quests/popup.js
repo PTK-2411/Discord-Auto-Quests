@@ -260,10 +260,29 @@ const btnDismissUpdate = document.getElementById('btnDismissUpdate');
 const btnReloadExtension = document.getElementById('btnReloadExtension');
 let currentUpdateState = null;
 
+function parseSemVer(versionStr) {
+  if (typeof versionStr !== 'string') return [0, 0, 0];
+  const cleaned = versionStr.trim().replace(/^[vV]/, '');
+  const parts = cleaned.split(/[-+]/)[0].split('.').map(n => parseInt(n, 10) || 0);
+  while (parts.length < 3) parts.push(0);
+  return parts.slice(0, 3);
+}
+
+function compareVersions(local, remote) {
+  const [lMajor, lMinor, lPatch] = parseSemVer(local);
+  const [rMajor, rMinor, rPatch] = parseSemVer(remote);
+
+  if (lMajor !== rMajor) return lMajor > rMajor ? 1 : -1;
+  if (lMinor !== rMinor) return lMinor > rMinor ? 1 : -1;
+  if (lPatch !== rPatch) return lPatch > rPatch ? 1 : -1;
+  return 0;
+}
+
 function renderUpdateBanner(updateState) {
   currentUpdateState = updateState || null;
   if (!updateBanner) return;
-  if (!updateState || !updateState.updateAvailable) {
+  const currentManifestVer = (typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.()?.version) || '2.4.0';
+  if (!updateState || !updateState.updateAvailable || compareVersions(currentManifestVer, updateState.latestVersion) >= 0) {
     updateBanner.classList.add('hidden');
     return;
   }
@@ -271,7 +290,7 @@ function renderUpdateBanner(updateState) {
   updateBanner.classList.remove('hidden');
   if (updateBannerTitle) updateBannerTitle.textContent = t('updateTitle');
   if (updateBannerVersion) {
-    updateBannerVersion.textContent = `v${updateState.currentVersion || '2.4.0'} → v${updateState.latestVersion}`;
+    updateBannerVersion.textContent = `v${currentManifestVer} → v${updateState.latestVersion}`;
   }
   if (updateBannerDesc) updateBannerDesc.textContent = t('updateDesc');
   if (btnAcceptUpdate) {
@@ -1185,6 +1204,9 @@ if (btnAcceptUpdate) {
       if (res && res.success) {
         showToast(t('updateDownloadSuccess'), 'success');
         btnAcceptUpdate.classList.add('hidden');
+        if (updateBannerDesc) {
+          updateBannerDesc.textContent = t('updateDownloadSuccess');
+        }
         if (btnReloadExtension) {
           btnReloadExtension.classList.remove('hidden');
         }
@@ -1208,6 +1230,8 @@ if (btnDismissUpdate) {
 
 if (btnReloadExtension) {
   btnReloadExtension.addEventListener('click', () => {
+    btnReloadExtension.disabled = true;
+    btnReloadExtension.textContent = '...';
     chrome.runtime.sendMessage({ action: 'RELOAD_EXTENSION' });
   });
 }
