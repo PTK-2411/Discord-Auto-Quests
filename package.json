@@ -1,0 +1,40 @@
+{
+  "name": "ptkhoa",
+  "version": "2.3.0",
+  "description": "Discord Quest Auto Claim",
+  "main": "farm.ts",
+  "scripts": {
+    "go": "tsx --env-file-if-exists=.env farm.ts",
+    "test": "bash test-suite/run-all-tests.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PTK-2411/Discord-Auto-Quests.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PTK-2411/Discord-Auto-Quests/issues"
+  },
+  "homepage": "https://github.com/PTK-2411/Discord-Auto-Quests#readme",
+  "license": "Apache-2.0 OR MIT OR GPL-3.0-or-later",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@discordjs/core": "^1.1.1",
+    "@discordjs/rest": "^2.2.0",
+    "@discordjs/ws": "^1.0.2",
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.3",
+    "discord-api-types": "^0.37.61",
+    "undici": "^6.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}

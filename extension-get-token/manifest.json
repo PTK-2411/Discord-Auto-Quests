@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Discord Token Extractor by PTKhoa",
+  "version": "2.3.0",
+  "description": "Extracts the user token from Discord.",
+  "permissions": ["activeTab", "clipboardWrite", "scripting"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "logo.png",
+      "48": "logo.png",
+      "128": "logo.png"
+    }
+  },
+  "icons": {
+    "16": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
+  }
+}

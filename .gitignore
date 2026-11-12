@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Accounts & Credentials
+accounts.json
+ptk-accounts.json
+hieu-accounts.json
+.accounts-*.tmp
+*.token
+
+# Logs, Build & Temp
+*.log
+_metadata/
+.DS_Store
+dist/
+coverage/
+
+# AI Agent internal scratch
+.agents/

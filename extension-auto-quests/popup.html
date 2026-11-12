@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Discord Auto Quests</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <img src="icons/icon48.png" alt="Logo" class="app-logo">
+        <div>
+          <h1 class="app-title" id="appTitle">Auto Quests</h1>
+          <span class="app-subtitle" id="appSubtitle">PTK Tool &bull; v2.3 by PTKhoa</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <!-- Language Switcher (EN / VI) -->
+        <div class="lang-switch" id="langSwitch" title="Switch Language / Chọn ngôn ngữ">
+          <button type="button" class="lang-btn active" data-lang="en" id="langBtnEn">EN</button>
+          <span class="lang-divider">|</span>
+          <button type="button" class="lang-btn" data-lang="vi" id="langBtnVi">VI</button>
+        </div>
+        <!-- Auto-Run Toggle -->
+        <div class="toggle-group">
+          <label class="toggle-switch" title="Auto-run when opening discord.com" id="autoRunLabel">
+            <input type="checkbox" id="autoRunToggle" checked>
+            <span class="slider"></span>
+          </label>
+          <span class="toggle-label" id="autoRunText">Auto</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- User Profile Card -->
+    <section class="user-card" id="userCard">
+      <div class="user-avatar-wrap">
+        <img id="userAvatar" src="icons/icon48.png" alt="Avatar" class="user-avatar">
+        <span id="userStatusDot" class="status-dot"></span>
+      </div>
+      <div class="user-details">
+        <div class="username-row">
+          <span id="userName" class="user-name">Not connected</span>
+          <span id="userId" class="user-id">#0000</span>
+        </div>
+        <div class="balance-row">
+          <span class="orb-badge">
+            <span class="orb-icon">🔮</span>
+            <span id="userOrbs" class="orb-count">-- Orbs</span>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Token Configuration Bar -->
+    <section class="token-bar" id="tokenBar">
+      <div class="token-summary">
+        <span class="token-badge-label" id="tokenBadgeLabel">🔑 Token:</span>
+        <span id="tokenStatusText" class="token-masked">No token set</span>
+        <div class="token-actions">
+          <button id="extractTabTokenBtn" class="btn-token-sync" title="Extract token directly from active Discord tab">📥 From Tab</button>
+          <button id="toggleTokenBtn" class="btn-text">Change</button>
+        </div>
+      </div>
+      <div id="tokenInputRow" class="token-input-row hidden">
+        <input type="password" id="tokenInput" placeholder="Paste Discord token (or open discord.com)" autocomplete="off">
+        <button id="saveTokenBtn" class="btn btn-sm btn-primary">Save</button>
+      </div>
+    </section>
+
+    <!-- Toast Notification Banner -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Action Toolbar -->
+    <div class="toolbar">
+      <button id="runBtn" class="btn btn-primary">
+        <span id="runBtnIcon" class="btn-icon">⚡</span>
+        <span id="runBtnText">Start Now</span>
+      </button>
+      <button id="refreshBtn" class="btn btn-secondary" title="Refresh data from Discord">
+        <span id="refreshIcon" class="btn-icon">🔄</span>
+      </button>
+      <button id="clearLogsBtn" class="btn btn-secondary" title="Clear logs">
+        <span class="btn-icon">🗑️</span>
+      </button>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" data-tab="questsTab" id="questsTabBtn">Quests (<span id="questCount">0</span>)</button>
+      <button class="tab-btn" data-tab="logsTab" id="logsTabBtn">Logs</button>
+    </nav>
+
+    <!-- Quests Tab Content -->
+    <main id="questsTab" class="tab-content active">
+      <div id="questList" class="quest-list">
+        <div class="empty-state">
+          <span class="empty-icon">🎮</span>
+          <p id="emptyStateText">Open a <strong>discord.com</strong> tab or paste a token to start auto-completing quests!</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Logs Tab Content -->
+    <main id="logsTab" class="tab-content">
+      <div id="logConsole" class="log-console">
+        <!-- Log entries injected here -->
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <span id="footerAuthor">PTK Tool by PTKhoa</span>
+      <span id="statusIndicator" class="ready-badge">Ready</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
