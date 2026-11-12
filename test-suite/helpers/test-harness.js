@@ -87,6 +87,13 @@ function createMockElement(id = '', tag = 'div') {
       children.push(child);
       return child;
     },
+    removeChild: (child) => {
+      const idx = children.indexOf(child);
+      if (idx !== -1) children.splice(idx, 1);
+      return child;
+    },
+    focus: () => {},
+    select: () => {},
     querySelector: (sel) => createMockElement('', 'span'),
     querySelectorAll: (sel) => [],
     get children() {
@@ -124,8 +131,22 @@ function createMockDocument() {
     updateBannerDesc: createMockElement('updateBannerDesc', 'div'),
     btnAcceptUpdate: createMockElement('btnAcceptUpdate', 'button'),
     btnDismissUpdate: createMockElement('btnDismissUpdate', 'button'),
-    btnReloadExtension: createMockElement('btnReloadExtension', 'button')
+    btnReloadExtension: createMockElement('btnReloadExtension', 'button'),
+    tokenBadgeLabel: createMockElement('tokenBadgeLabel', 'span'),
+    tokenStatusText: createMockElement('tokenStatusText', 'span'),
+    btnCopyToken: createMockElement('btnCopyToken', 'button'),
+    toggleTokenBtn: createMockElement('toggleTokenBtn', 'button'),
+    extractTabTokenBtn: createMockElement('extractTabTokenBtn', 'button'),
+    tokenInputRow: createMockElement('tokenInputRow', 'div'),
+    tokenInput: createMockElement('tokenInput', 'input'),
+    saveTokenBtn: createMockElement('saveTokenBtn', 'button'),
+    toast: createMockElement('toast', 'div')
   };
+
+  elements.copyTokenBtn = elements.btnCopyToken;
+  elements.btnCopyToken.textContent = '📋 Copy';
+  elements.tokenInputRow.classList.add('hidden');
+  elements.toast.classList.add('hidden');
 
   elements.userAvatar.src = 'icons/icon48.png';
   elements.autoRunToggle.checked = true;
@@ -144,9 +165,14 @@ function createMockDocument() {
 
   const doc = {
     elements,
+    body: createMockElement('body', 'body'),
+    execCommand: (cmd) => true,
     tabButtons: [tabBtn1, tabBtn2],
     tabContents: [elements.questsTab, elements.logsTab],
-    getElementById: (id) => elements[id] || null,
+    getElementById: (id) => {
+      if (id === 'copyTokenBtn') return elements.btnCopyToken;
+      return elements[id] || null;
+    },
     querySelectorAll: (selector) => {
       if (selector === '.tab-btn') return [tabBtn1, tabBtn2];
       if (selector === '.tab-content') return [elements.questsTab, elements.logsTab];
@@ -534,6 +560,18 @@ function createPopupSandbox(options = {}) {
   const runtimeListeners = [];
   const downloadsCalls = [];
   const reloadCalls = [];
+  const clipboardWrites = [];
+
+  const navigatorMock = {
+    clipboard: {
+      writeText: async (text) => {
+        if (options.clipboardError) {
+          throw new Error('Clipboard write failed');
+        }
+        clipboardWrites.push(text);
+      }
+    }
+  };
 
   const chromeMock = {
     storage: storage,
@@ -586,6 +624,7 @@ function createPopupSandbox(options = {}) {
     console,
     alert: (msg) => alerts.push(msg),
     chrome: chromeMock,
+    navigator: options.navigator || navigatorMock,
     setTimeout,
     clearTimeout
   };
@@ -600,6 +639,7 @@ function createPopupSandbox(options = {}) {
     doc,
     elements: doc.elements,
     alerts,
+    clipboardWrites,
     downloadsCalls,
     reloadCalls,
     runtimeListeners,

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/PTKTool-v2.4-blueviolet?style=for-the-badge&logo=discord&logoColor=white" alt="Phiên bản"/>
+  <img src="https://img.shields.io/badge/PTKTool-v2.4.1-blueviolet?style=for-the-badge&logo=discord&logoColor=white" alt="Phiên bản"/>
   <img src="https://img.shields.io/badge/Node.js-%3E%3D20.12-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node"/>
   <img src="https://img.shields.io/badge/TypeScript-5.3+-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"/>
   <img src="https://img.shields.io/badge/License-Apache%202.0%20%7C%20MIT%20%7C%20GPL%203.0-blue?style=for-the-badge" alt="Giấy phép"/>
@@ -26,15 +26,16 @@
 
 **PTK Tool (phát triển bởi PTKhoa)** là một hệ sinh thái tự động hóa toàn diện giúp bạn hoàn thành các nhiệm vụ Discord Quests và nhận thưởng tự động. Dự án bao gồm:
 
-1. 🧩 **Tiện ích mở rộng Chrome tổng hợp (`extension-auto-quests` v2.4)**:
+1. 🧩 **Tiện ích mở rộng Chrome tổng hợp (`extension-auto-quests` v2.4.1)**:
    - Tự động bắt token Discord ngầm khi mở hoặc tải lại tab `https://discord.com/`.
    - Hỗ trợ chuyển đổi song ngữ (**Tiếng Việt / Tiếng Anh**, mặc định là **English**).
    - Giao diện Popup bo tròn 4 góc 14px chuẩn Discord Dark theme.
    - Tự động xử lý nhiệm vụ xem video, nhiệm vụ chơi game qua heartbeat và tự nhận thưởng.
    - Console ghi nhật ký thời gian thực, nút dừng phản hồi ngay lập tức và nút làm mới dữ liệu tức thì.
    - Nút làm nhiệm vụ lẻ cho từng nhiệm vụ riêng biệt.
+   - **Sao chép Token nhanh**: Nút sao chép token (`btnCopyToken`) đưa token Discord đang kích hoạt vào bộ nhớ tạm (clipboard) chỉ với 1 click.
    - **Tự động kiểm tra bản cập nhật**: Tự động so sánh phiên bản từ GitHub, hiện thông báo trên Popup và tải bản cập nhật trực tiếp chỉ với 1 click.
-2. 🔑 **Tiện ích trích xuất Token độc lập (`extension-get-token` v2.4)**:
+2. 🔑 **Tiện ích trích xuất Token độc lập (`extension-get-token` v2.4.1)**:
    - Trích xuất token Discord vào Clipboard chỉ với 1 cú click.
 3. 💻 **Ứng dụng dòng lệnh CLI TypeScript (`farm.ts`)**:
    - Giao diện dashboard terminal đa tài khoản (`accounts.json`).
@@ -105,7 +106,7 @@ Menu tương tác cho phép bạn chọn tài khoản đã lưu, dán token mớ
 
 ```
 Discord-Auto-Quests/
-├── extension-auto-quests/       # Tiện ích Chrome MV3 tự động làm quest (v2.4)
+├── extension-auto-quests/       # Tiện ích Chrome MV3 tự động làm quest (v2.4.1)
 │   ├── manifest.json            # Cấu hình MV3 & quyền hạn
 │   ├── background.js            # Service worker (REST engine & heartbeats)
 │   ├── content.js               # Content script trích xuất token tự động
@@ -113,7 +114,7 @@ Discord-Auto-Quests/
 │   ├── popup.html               # Giao diện Popup song ngữ (bo tròn 4 góc)
 │   ├── popup.css                # CSS Discord Dark theme bo tròn 14px
 │   └── popup.js                 # Điều khiển Popup & bộ máy i18n
-├── extension-get-token/         # Tiện ích độc lập lấy token vào clipboard (v2.4)
+├── extension-get-token/         # Tiện ích độc lập lấy token vào clipboard (v2.4.1)
 │   ├── manifest.json
 │   ├── popup.html
 │   └── popup.js

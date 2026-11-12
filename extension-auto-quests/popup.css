@@ -8,6 +8,7 @@
   --text-normal: #dbdee1;
   --text-muted: #949ba4;
   --text-header: #f2f3f5;
+  --primary: #5865f2;
   --brand: #5865f2;
   --brand-hover: #4752c4;
   --success: #23a55a;
@@ -719,6 +720,12 @@ input:checked + .slider:before {
   background-color: rgba(0, 168, 252, 0.2);
   color: #00a8fc;
   border-bottom: 1px solid rgba(0, 168, 252, 0.4);
+}
+
+.toast.warning {
+  background-color: rgba(240, 178, 50, 0.2);
+  color: #f0b232;
+  border-bottom: 1px solid rgba(240, 178, 50, 0.4);
 }
 
 /* Update Notification Banner */

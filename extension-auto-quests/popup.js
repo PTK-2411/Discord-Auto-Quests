@@ -1,10 +1,10 @@
-// Discord Auto Quests - Popup Script (v2.4)
+// Discord Auto Quests - Popup Script (v2.4.1)
 
 // i18n Translations Dictionary (Default: English)
 const TRANSLATIONS = {
   en: {
     appTitle: 'Auto Quests',
-    subtitle: 'PTK Tool • v2.4 by PTKhoa',
+    subtitle: 'PTK Tool • v2.4.1 by PTKhoa',
     autoRunTitle: 'Auto-run when opening discord.com',
     autoRun: 'Auto',
     notConnected: 'Not connected',
@@ -12,6 +12,9 @@ const TRANSLATIONS = {
     tokenLabel: '🔑 Token:',
     noToken: 'No token set',
     extractTabBtn: '📥 From Tab',
+    copyTokenBtn: '📋 Copy',
+    btnCopyToken: '📋 Copy',
+    copyTokenTitle: 'Copy token to clipboard',
     changeToken: 'Change',
     closeToken: 'Close',
     tokenPlaceholder: 'Paste Discord token (or open discord.com)',
@@ -54,6 +57,9 @@ const TRANSLATIONS = {
     toastTokenSaved: 'Discord account connected successfully!',
     toastTokenInvalid: 'Please enter a valid Discord token.',
     toastTokenExtracted: '✔ Successfully synced token from Discord tab!',
+    toastTokenCopied: '✔ Token copied to clipboard!',
+    toastNoTokenToCopy: 'No token to copy! Please connect or extract token first.',
+    toastCopyFailed: 'Failed to copy token to clipboard.',
     toastNoDiscordTab: 'No Discord tab found. Please open discord.com first!',
     alertNoDiscordTab: 'Please open https://discord.com and log in before extracting token!',
     toastNoTokenFound: 'No token found in Discord tab. Please make sure you are logged in!',
@@ -70,7 +76,7 @@ const TRANSLATIONS = {
   },
   vi: {
     appTitle: 'Auto Quests',
-    subtitle: 'PTK Tool • v2.4 by PTKhoa',
+    subtitle: 'PTK Tool • v2.4.1 by PTKhoa',
     autoRunTitle: 'Tự động chạy khi mở tab discord.com',
     autoRun: 'Tự động',
     notConnected: 'Chưa kết nối',
@@ -78,6 +84,9 @@ const TRANSLATIONS = {
     tokenLabel: '🔑 Token:',
     noToken: 'Chưa có token',
     extractTabBtn: '📥 Lấy từ tab',
+    copyTokenBtn: '📋 Sao chép',
+    btnCopyToken: '📋 Sao chép',
+    copyTokenTitle: 'Sao chép token vào clipboard',
     changeToken: 'Đổi',
     closeToken: 'Đóng',
     tokenPlaceholder: 'Dán token Discord (hoặc mở tab discord.com)',
@@ -120,6 +129,9 @@ const TRANSLATIONS = {
     toastTokenSaved: 'Kết nối tài khoản Discord thành công!',
     toastTokenInvalid: 'Vui lòng dán token Discord hợp lệ.',
     toastTokenExtracted: '✔ Đã tự động kết nối tài khoản Discord từ tab!',
+    toastTokenCopied: '✔ Đã sao chép token vào clipboard!',
+    toastNoTokenToCopy: 'Chưa có token để sao chép! Vui lòng kết nối tài khoản trước.',
+    toastCopyFailed: 'Không thể sao chép token vào clipboard.',
     toastNoDiscordTab: 'Chưa mở tab Discord. Hãy mở discord.com trước!',
     alertNoDiscordTab: 'Vui lòng mở tab https://discord.com và đăng nhập trước khi lấy token!',
     toastNoTokenFound: 'Chưa tìm thấy token trong tab Discord. Hãy đăng nhập tài khoản!',
@@ -245,6 +257,7 @@ const tokenBadgeLabel = document.getElementById('tokenBadgeLabel');
 const tokenStatusText = document.getElementById('tokenStatusText');
 const toggleTokenBtn = document.getElementById('toggleTokenBtn');
 const extractTabTokenBtn = document.getElementById('extractTabTokenBtn');
+const btnCopyToken = document.getElementById('btnCopyToken') || document.getElementById('copyTokenBtn');
 const tokenInputRow = document.getElementById('tokenInputRow');
 const tokenInput = document.getElementById('tokenInput');
 const saveTokenBtn = document.getElementById('saveTokenBtn');
@@ -281,7 +294,7 @@ function compareVersions(local, remote) {
 function renderUpdateBanner(updateState) {
   currentUpdateState = updateState || null;
   if (!updateBanner) return;
-  const currentManifestVer = (typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.()?.version) || '2.4.0';
+  const currentManifestVer = (typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.()?.version) || '2.4.1';
   if (!updateState || !updateState.updateAvailable || compareVersions(currentManifestVer, updateState.latestVersion) >= 0) {
     updateBanner.classList.add('hidden');
     return;
@@ -315,6 +328,7 @@ let isRefreshing = false;
 let lastCachedQuests = [];
 let lastCachedUser = null;
 let lastCachedOrbs = null;
+let currentToken = '';
 
 // Connect persistent port to keep worker alive while popup is open
 let backgroundPort = null;
@@ -647,6 +661,10 @@ function applyTranslations() {
   // Token Bar
   if (tokenBadgeLabel) tokenBadgeLabel.textContent = t('tokenLabel');
   if (extractTabTokenBtn) extractTabTokenBtn.textContent = t('extractTabBtn');
+  if (btnCopyToken) {
+    btnCopyToken.textContent = t('btnCopyToken');
+    btnCopyToken.title = t('copyTokenTitle');
+  }
   if (toggleTokenBtn && tokenInputRow) {
     toggleTokenBtn.textContent = tokenInputRow.classList.contains('hidden') ? t('changeToken') : t('closeToken');
   }
@@ -728,6 +746,7 @@ async function loadData() {
   renderLogs(data.logs);
   updateRunningUI(Boolean(data.isRunning), Boolean(data.isStopping));
 
+  currentToken = data.token || '';
   if (tokenStatusText) {
     tokenStatusText.textContent = maskToken(data.token);
   }
@@ -799,8 +818,11 @@ function handleIncomingMessage(message) {
     if (message.state.isRunning !== undefined) {
       updateRunningUI(message.state.isRunning, message.state.isStopping);
     }
-    if (message.state.token && tokenStatusText) {
-      tokenStatusText.textContent = maskToken(message.state.token);
+    if (message.state.token) {
+      currentToken = message.state.token;
+      if (tokenStatusText) {
+        tokenStatusText.textContent = maskToken(message.state.token);
+      }
     }
   }
 }
@@ -963,6 +985,7 @@ if (saveTokenBtn && tokenInput) {
       }
 
       if (res && res.success) {
+        currentToken = val;
         if (tokenStatusText) tokenStatusText.textContent = maskToken(val);
         tokenInputRow.classList.add('hidden');
         if (toggleTokenBtn) toggleTokenBtn.textContent = t('changeToken');
@@ -975,6 +998,73 @@ if (saveTokenBtn && tokenInput) {
         showToast(res?.error || 'Could not save token.', 'error');
       }
     });
+  });
+}
+
+// 5b. Copy Token to Clipboard with Fallback
+async function copyTokenToClipboard() {
+  let token = currentToken;
+  if (!token && tokenInput && tokenInput.value && tokenInput.value.trim()) {
+    token = tokenInput.value.trim();
+  }
+  if (!token && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    try {
+      const data = await chrome.storage.local.get(['token']);
+      if (data && data.token) {
+        token = data.token;
+        currentToken = data.token;
+      }
+    } catch (e) {
+      console.warn('Storage get token error in copyTokenToClipboard:', e);
+    }
+  }
+
+  if (token) {
+    token = String(token).replace(/"/g, '').trim();
+  }
+
+  if (!token) {
+    showToast(t('toastNoTokenToCopy'), 'warning');
+    return false;
+  }
+
+  let copied = false;
+  if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    try {
+      await navigator.clipboard.writeText(token);
+      copied = true;
+    } catch (e) {
+      console.warn('navigator.clipboard.writeText failed, attempting fallback:', e);
+    }
+  }
+
+  if (!copied && typeof document !== 'undefined') {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = token;
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '0';
+      textarea.style.opacity = '0';
+      if (document.body && typeof document.body.appendChild === 'function') {
+        document.body.appendChild(textarea);
+        if (typeof textarea.focus === 'function') textarea.focus();
+        if (typeof textarea.select === 'function') textarea.select();
+        copied = document.execCommand ? document.execCommand('copy') : false;
+        document.body.removeChild(textarea);
+      }
+    } catch (e) {
+      console.warn('Fallback copy error:', e);
+    }
+  }
+
+  showToast(t('toastTokenCopied'), 'success');
+  return true;
+}
+
+if (btnCopyToken) {
+  btnCopyToken.addEventListener('click', () => {
+    copyTokenToClipboard();
   });
 }
 
@@ -1014,6 +1104,7 @@ async function extractTokenFromActiveTab(showAlert = true) {
           extractTabTokenBtn.disabled = false;
           extractTabTokenBtn.textContent = t('extractTabBtn');
         }
+        currentToken = response.token.replace(/"/g, '').trim();
         if (tokenStatusText) tokenStatusText.textContent = maskToken(response.token);
         if (response.state) {
           renderUser(response.state.user, response.state.orbs);
@@ -1105,6 +1196,7 @@ function executeDirectExtraction(tab, showAlert) {
       const token = results[0]?.result;
       if (token && typeof token === 'string' && token.length > 0) {
         const cleanToken = token.replace(/"/g, '').trim();
+        currentToken = cleanToken;
         chrome.storage.local.set({ token: cleanToken });
         if (tokenStatusText) tokenStatusText.textContent = maskToken(cleanToken);
         showToast(t('toastTokenExtracted'), 'success');

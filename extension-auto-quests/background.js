@@ -1133,7 +1133,7 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 
 // ==========================================
-// GitHub Auto-Update & Version Check (v2.4)
+// GitHub Auto-Update & Version Check (v2.4.1)
 // ==========================================
 
 const GITHUB_RAW_PACKAGE_URL = 'https://raw.githubusercontent.com/PTK-2411/Discord-Auto-Quests/main/package.json';
@@ -1161,7 +1161,7 @@ function compareVersions(local, remote) {
 }
 
 async function checkForUpdates() {
-  const currentVersion = (typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.()?.version) || '2.4.0';
+  const currentVersion = (typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.()?.version) || '2.4.1';
   let latestVersion = null;
 
   // 1. Fetch package.json from raw GitHub

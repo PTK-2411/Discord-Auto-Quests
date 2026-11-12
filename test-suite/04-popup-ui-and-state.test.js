@@ -656,3 +656,87 @@ test('Tier 1 & Tier 2 - F8: GitHub Auto-Update Engine & Popup Banner UI', async 
     assert.ok(response.error.includes('Download failed to initiate'));
   });
 });
+
+test('Tier 1 & Tier 2 - F9: Token Copy to Clipboard & UI State (v2.4.1)', async (t) => {
+  await t.test('T1.F9.1: btnCopyToken copies token from storage to clipboard and displays success toast', async () => {
+    const popup = createPopupSandbox({ initialStorage: { token: 'sample-token-12345-xyz' } });
+
+    popup.elements.btnCopyToken.dispatch('click');
+    await new Promise(r => setTimeout(r, 20));
+
+    assert.equal(popup.clipboardWrites.length, 1);
+    assert.equal(popup.clipboardWrites[0], 'sample-token-12345-xyz');
+    assert.ok(popup.elements.toast.textContent.includes('Token copied to clipboard'));
+    assert.ok(popup.elements.toast.className.includes('success'));
+  });
+
+  await t.test('T1.F9.2: btnCopyToken displays warning toast when token is empty', async () => {
+    const popup = createPopupSandbox({ initialStorage: {} });
+
+    popup.elements.btnCopyToken.dispatch('click');
+    await new Promise(r => setTimeout(r, 20));
+
+    assert.equal(popup.clipboardWrites.length, 0);
+    assert.ok(popup.elements.toast.textContent.includes('No token'));
+    assert.ok(popup.elements.toast.className.includes('warning'));
+  });
+
+  await t.test('T2.F9.1: copyToken button copies from tokenInput when not yet saved to storage', async () => {
+    const popup = createPopupSandbox({ initialStorage: {} });
+    popup.elements.tokenInput.value = 'unsaved-input-token-888';
+
+    await popup.sandbox.copyTokenToClipboard();
+
+    assert.equal(popup.clipboardWrites.length, 1);
+    assert.equal(popup.clipboardWrites[0], 'unsaved-input-token-888');
+    assert.ok(popup.elements.toast.className.includes('success'));
+  });
+
+  await t.test('T2.F9.2: copyToken button strips enclosing quotes and whitespace before writing', async () => {
+    const popup = createPopupSandbox({ initialStorage: { token: '  "token-with-quotes-999"  ' } });
+
+    await popup.sandbox.copyTokenToClipboard();
+
+    assert.equal(popup.clipboardWrites[0], 'token-with-quotes-999');
+    assert.ok(popup.elements.toast.className.includes('success'));
+  });
+
+  await t.test('T2.F9.3: Falls back gracefully when navigator.clipboard.writeText throws', async () => {
+    const popup = createPopupSandbox({
+      initialStorage: { token: 'fallback-test-token' },
+      clipboardError: true
+    });
+
+    const result = await popup.sandbox.copyTokenToClipboard();
+    assert.equal(result, true);
+    assert.ok(popup.elements.toast.textContent.includes('Token copied to clipboard'));
+    assert.ok(popup.elements.toast.className.includes('success'));
+  });
+
+  await t.test('T2.F9.4: Language switch dynamically updates copy button and localized toast messages (VI & EN)', async () => {
+    const popup = createPopupSandbox({ initialStorage: { token: 'bilingual-token-abc' } });
+    await new Promise(r => setTimeout(r, 20));
+
+    // Switch to Vietnamese
+    popup.sandbox.setLanguage('vi');
+    assert.equal(popup.elements.btnCopyToken.textContent, '📋 Sao chép');
+
+    await popup.sandbox.copyTokenToClipboard();
+    assert.equal(popup.elements.toast.textContent, '✔ Đã sao chép token vào clipboard!');
+
+    // Test empty warning toast in Vietnamese
+    const emptyPopup = createPopupSandbox({ initialStorage: {} });
+    await new Promise(r => setTimeout(r, 20));
+    emptyPopup.sandbox.setLanguage('vi');
+    await emptyPopup.sandbox.copyTokenToClipboard();
+    assert.ok(emptyPopup.elements.toast.textContent.includes('Chưa có token'));
+    assert.ok(emptyPopup.elements.toast.className.includes('warning'));
+
+    // Switch back to English
+    popup.sandbox.setLanguage('en');
+    assert.equal(popup.elements.btnCopyToken.textContent, '📋 Copy');
+    await popup.sandbox.copyTokenToClipboard();
+    assert.equal(popup.elements.toast.textContent, '✔ Token copied to clipboard!');
+  });
+});
+
