@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/PTKTool-v2.3-blueviolet?style=for-the-badge&logo=discord&logoColor=white" alt="Version"/>
+  <img src="https://img.shields.io/badge/PTKTool-v2.4-blueviolet?style=for-the-badge&logo=discord&logoColor=white" alt="Version"/>
   <img src="https://img.shields.io/badge/Node.js-%3E%3D20.12-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node"/>
   <img src="https://img.shields.io/badge/TypeScript-5.3+-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"/>
   <img src="https://img.shields.io/badge/License-Apache%202.0%20%7C%20MIT%20%7C%20GPL%203.0-blue?style=for-the-badge" alt="License"/>
@@ -26,14 +26,15 @@
 
 **PTK Tool (by PTKhoa)** is a complete automation suite for completing Discord Quests and claiming rewards automatically. It includes:
 
-1. 🧩 **Consolidated Chrome Extension (`extension-auto-quests` v2.3)**:
+1. 🧩 **Consolidated Chrome Extension (`extension-auto-quests` v2.4)**:
    - Sniffs Discord user token automatically when navigating or reloading `https://discord.com/`.
    - Built-in UI language switcher (**English / Vietnamese**, defaults to **EN**).
    - Rounded 4-corner Discord Dark theme popup.
    - Automatically processes video quests, heartbeat-based game quests, and auto-claims rewards.
    - Real-time logging console, stop execution button with responsive cancellation, and manual refresh.
    - Individual quest execution buttons to trigger specific quests independently.
-2. 🔑 **Standalone Token Extractor (`extension-get-token` v2.3)**:
+   - **Auto-Update & Version Check**: Automatically checks GitHub for latest release, notifies in popup, and downloads updates with 1-click.
+2. 🔑 **Standalone Token Extractor (`extension-get-token` v2.4)**:
    - 1-click token extraction directly to your system clipboard.
 3. 💻 **TypeScript CLI Farmer (`farm.ts`)**:
    - Interactive terminal dashboard with multi-account manager (`accounts.json`).
@@ -104,7 +105,7 @@ The interactive menu lets you choose a saved account, add a new token, or manage
 
 ```
 Discord-Auto-Quests/
-├── extension-auto-quests/       # All-in-one Chrome MV3 Auto-Quest Extension (v2.3)
+├── extension-auto-quests/       # All-in-one Chrome MV3 Auto-Quest Extension (v2.4)
 │   ├── manifest.json            # MV3 configuration & permissions
 │   ├── background.js            # Service worker (REST engine & heartbeats)
 │   ├── content.js               # Isolated content script for token detection
@@ -112,7 +113,7 @@ Discord-Auto-Quests/
 │   ├── popup.html               # Popup UI (EN/VI bilingual, rounded corners)
 │   ├── popup.css                # Discord dark styling with 14px rounded corners
 │   └── popup.js                 # Popup controller & i18n translation engine
-├── extension-get-token/         # Lightweight standalone token extractor (v2.3)
+├── extension-get-token/         # Lightweight standalone token extractor (v2.4)
 │   ├── manifest.json
 │   ├── popup.html
 │   └── popup.js

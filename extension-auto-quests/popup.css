@@ -721,3 +721,125 @@ input:checked + .slider:before {
   border-bottom: 1px solid rgba(0, 168, 252, 0.4);
 }
 
+/* Update Notification Banner */
+.update-banner {
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.2) 0%, rgba(155, 89, 182, 0.2) 100%);
+  border: 1px solid rgba(88, 101, 242, 0.45);
+  border-radius: var(--radius-md);
+  margin: 8px 12px 2px 12px;
+  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease-in-out;
+}
+
+.update-banner.hidden {
+  display: none !important;
+}
+
+.update-banner-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.update-banner-icon {
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.update-banner-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.update-banner-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-header);
+  line-height: 1.2;
+}
+
+.update-banner-version {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5865f2;
+  margin-top: 1px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.update-banner-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.25;
+}
+
+.update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-update-accept {
+  flex: 1;
+  background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.btn-update-accept:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4752c4 0%, #3c45a5 100%);
+  transform: translateY(-1px);
+}
+
+.btn-update-accept:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-update-dismiss {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-update-dismiss:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-normal);
+}
+
+.btn-update-reload {
+  flex: 1;
+  background: linear-gradient(135deg, #23a55a 0%, #1c8448 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.btn-update-reload:hover {
+  background: linear-gradient(135deg, #1c8448 0%, #156637 100%);
+}
+
+

@@ -46,13 +46,15 @@ test('Tier 1 - F7: Manifest V3 Schema & Extension Structure', async (t) => {
   await t.test('T1.F7.5: extension-auto-quests declares required permissions and host_permissions', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(EXT_AUTO_QUESTS_DIR, 'manifest.json'), 'utf8'));
     assert.ok(Array.isArray(manifest.permissions), 'permissions must be an array');
-    const requiredPermissions = ['storage', 'tabs', 'scripting', 'notifications', 'alarms'];
+    const requiredPermissions = ['storage', 'tabs', 'scripting', 'notifications', 'alarms', 'downloads'];
     for (const perm of requiredPermissions) {
       assert.ok(manifest.permissions.includes(perm), `permissions must include '${perm}'`);
     }
 
     assert.ok(Array.isArray(manifest.host_permissions), 'host_permissions must be an array');
     assert.ok(manifest.host_permissions.some(p => p.includes('discord.com')), 'host_permissions must include Discord domain match pattern');
+    assert.ok(manifest.host_permissions.some(p => p.includes('raw.githubusercontent.com')), 'host_permissions must include raw.githubusercontent.com');
+    assert.ok(manifest.host_permissions.some(p => p.includes('api.github.com')), 'host_permissions must include api.github.com');
   });
 
   await t.test('T1.F7.6: extension-auto-quests configures service worker and popup action', () => {

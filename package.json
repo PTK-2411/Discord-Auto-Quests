@@ -1,11 +1,12 @@
 {
   "name": "ptkhoa",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Discord Quest Auto Claim",
   "main": "farm.ts",
   "scripts": {
     "go": "tsx --env-file-if-exists=.env farm.ts",
-    "test": "bash test-suite/run-all-tests.sh"
+    "test": "bash test-suite/run-all-tests.sh",
+    "update": "bash update.sh"
   },
   "repository": {
     "type": "git",

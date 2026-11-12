@@ -1,10 +1,10 @@
-// Discord Auto Quests - Popup Script (v2.3)
+// Discord Auto Quests - Popup Script (v2.4)
 
 // i18n Translations Dictionary (Default: English)
 const TRANSLATIONS = {
   en: {
     appTitle: 'Auto Quests',
-    subtitle: 'PTK Tool • v2.3 by PTKhoa',
+    subtitle: 'PTK Tool • v2.4 by PTKhoa',
     autoRunTitle: 'Auto-run when opening discord.com',
     autoRun: 'Auto',
     notConnected: 'Not connected',
@@ -58,11 +58,19 @@ const TRANSLATIONS = {
     alertNoDiscordTab: 'Please open https://discord.com and log in before extracting token!',
     toastNoTokenFound: 'No token found in Discord tab. Please make sure you are logged in!',
     toastExtractFailed: 'Failed to extract token from Discord tab.',
-    alertNoTokenToRun: 'Please connect a Discord account or open discord.com first!'
+    alertNoTokenToRun: 'Please connect a Discord account or open discord.com first!',
+    updateTitle: 'Update Available!',
+    updateDesc: 'New version is available on GitHub.',
+    btnAcceptUpdate: 'Update Now',
+    btnDismissUpdate: 'Later',
+    btnReloadExtension: 'Reload Extension',
+    updateDownloading: 'Downloading update from GitHub...',
+    updateDownloadSuccess: 'Update downloaded to Downloads! Extract zip and reload extension.',
+    updateDownloadFailed: 'Download failed:'
   },
   vi: {
     appTitle: 'Auto Quests',
-    subtitle: 'PTK Tool • v2.3 by PTKhoa',
+    subtitle: 'PTK Tool • v2.4 by PTKhoa',
     autoRunTitle: 'Tự động chạy khi mở tab discord.com',
     autoRun: 'Tự động',
     notConnected: 'Chưa kết nối',
@@ -116,7 +124,15 @@ const TRANSLATIONS = {
     alertNoDiscordTab: 'Vui lòng mở tab https://discord.com và đăng nhập trước khi lấy token!',
     toastNoTokenFound: 'Chưa tìm thấy token trong tab Discord. Hãy đăng nhập tài khoản!',
     toastExtractFailed: 'Không thể trích xuất token từ tab Discord.',
-    alertNoTokenToRun: 'Vui lòng kết nối tài khoản Discord hoặc mở tab discord.com trước!'
+    alertNoTokenToRun: 'Vui lòng kết nối tài khoản Discord hoặc mở tab discord.com trước!',
+    updateTitle: 'Có phiên bản mới!',
+    updateDesc: 'Đã có bản cập nhật mới trên GitHub.',
+    btnAcceptUpdate: 'Cập nhật ngay',
+    btnDismissUpdate: 'Để sau',
+    btnReloadExtension: 'Tải lại tiện ích',
+    updateDownloading: 'Đang tải bản cập nhật từ GitHub...',
+    updateDownloadSuccess: 'Đã tải thành công vào thư mục Tải về! Hãy giải nén file zip và tải lại tiện ích.',
+    updateDownloadFailed: 'Tải thất bại:'
   }
 };
 
@@ -233,6 +249,45 @@ const tokenInputRow = document.getElementById('tokenInputRow');
 const tokenInput = document.getElementById('tokenInput');
 const saveTokenBtn = document.getElementById('saveTokenBtn');
 const footerAuthor = document.getElementById('footerAuthor');
+
+// Update banner elements
+const updateBanner = document.getElementById('updateBanner');
+const updateBannerTitle = document.getElementById('updateBannerTitle');
+const updateBannerVersion = document.getElementById('updateBannerVersion');
+const updateBannerDesc = document.getElementById('updateBannerDesc');
+const btnAcceptUpdate = document.getElementById('btnAcceptUpdate');
+const btnDismissUpdate = document.getElementById('btnDismissUpdate');
+const btnReloadExtension = document.getElementById('btnReloadExtension');
+let currentUpdateState = null;
+
+function renderUpdateBanner(updateState) {
+  currentUpdateState = updateState || null;
+  if (!updateBanner) return;
+  if (!updateState || !updateState.updateAvailable) {
+    updateBanner.classList.add('hidden');
+    return;
+  }
+
+  updateBanner.classList.remove('hidden');
+  if (updateBannerTitle) updateBannerTitle.textContent = t('updateTitle');
+  if (updateBannerVersion) {
+    updateBannerVersion.textContent = `v${updateState.currentVersion || '2.4.0'} → v${updateState.latestVersion}`;
+  }
+  if (updateBannerDesc) updateBannerDesc.textContent = t('updateDesc');
+  if (btnAcceptUpdate) {
+    btnAcceptUpdate.textContent = t('btnAcceptUpdate');
+    btnAcceptUpdate.disabled = false;
+    btnAcceptUpdate.classList.remove('hidden');
+  }
+  if (btnDismissUpdate) {
+    btnDismissUpdate.textContent = t('btnDismissUpdate');
+    btnDismissUpdate.classList.remove('hidden');
+  }
+  if (btnReloadExtension) {
+    btnReloadExtension.textContent = t('btnReloadExtension');
+    btnReloadExtension.classList.add('hidden');
+  }
+}
 
 let isCurrentlyRunning = false;
 let isCurrentlyStopping = false;
@@ -613,6 +668,15 @@ function applyTranslations() {
   if (lastCachedLogs && lastCachedLogs.length > 0) {
     renderLogs(lastCachedLogs);
   }
+
+  // Update banner translations
+  if (updateBanner && !updateBanner.classList.contains('hidden') && currentUpdateState) {
+    if (updateBannerTitle) updateBannerTitle.textContent = t('updateTitle');
+    if (updateBannerDesc) updateBannerDesc.textContent = t('updateDesc');
+    if (btnAcceptUpdate && !btnAcceptUpdate.disabled) btnAcceptUpdate.textContent = t('btnAcceptUpdate');
+    if (btnDismissUpdate) btnDismissUpdate.textContent = t('btnDismissUpdate');
+    if (btnReloadExtension) btnReloadExtension.textContent = t('btnReloadExtension');
+  }
 }
 
 function setLanguage(lang) {
@@ -652,12 +716,52 @@ async function loadData() {
   if (data.autoRunEnabled !== undefined && autoRunToggle) {
     autoRunToggle.checked = data.autoRunEnabled;
   }
+
+  // Check update status
+  checkUpdateStatus();
+}
+
+async function checkUpdateStatus() {
+  try {
+    const res = await chrome.storage.local.get(['updateState', 'dismissedUpdateVersion']);
+    if (res.updateState) {
+      currentUpdateState = res.updateState;
+      if (res.dismissedUpdateVersion !== res.updateState.latestVersion) {
+        renderUpdateBanner(res.updateState);
+      }
+    }
+  } catch (e) {
+    console.warn('Storage read updateState error:', e);
+  }
+
+  try {
+    chrome.runtime.sendMessage({ action: 'CHECK_UPDATE' }, (resp) => {
+      if (chrome.runtime?.lastError) return;
+      if (resp && resp.success && resp.updateState) {
+        currentUpdateState = resp.updateState;
+        chrome.storage.local.get(['dismissedUpdateVersion']).then(d => {
+          if (d.dismissedUpdateVersion !== resp.updateState.latestVersion) {
+            renderUpdateBanner(resp.updateState);
+          }
+        }).catch(() => {});
+      }
+    });
+  } catch (e) {
+    console.warn('SendMessage CHECK_UPDATE error:', e);
+  }
 }
 
 function handleIncomingMessage(message) {
   if (!message) return;
 
-  if (message.action === 'LOG_ADDED') {
+  if (message.action === 'UPDATE_CHECK_RESULT' && message.updateState) {
+    currentUpdateState = message.updateState;
+    chrome.storage.local.get(['dismissedUpdateVersion']).then(d => {
+      if (d.dismissedUpdateVersion !== message.updateState.latestVersion) {
+        renderUpdateBanner(message.updateState);
+      }
+    }).catch(() => {});
+  } else if (message.action === 'LOG_ADDED') {
     if (message.entry) {
       lastCachedLogs.push(message.entry);
       if (lastCachedLogs.length > 300) lastCachedLogs.shift();
@@ -1059,5 +1163,55 @@ if (questList) {
   });
 }
 
+// Update Banner Button Listeners
+if (btnAcceptUpdate) {
+  btnAcceptUpdate.addEventListener('click', () => {
+    btnAcceptUpdate.disabled = true;
+    btnAcceptUpdate.textContent = t('updateDownloading');
+    showToast(t('updateDownloading'), 'info');
+
+    chrome.runtime.sendMessage({
+      action: 'DOWNLOAD_UPDATE',
+      version: currentUpdateState?.latestVersion,
+      url: currentUpdateState?.downloadUrl
+    }, (res) => {
+      if (chrome.runtime?.lastError) {
+        btnAcceptUpdate.disabled = false;
+        btnAcceptUpdate.textContent = t('btnAcceptUpdate');
+        showToast(`${t('updateDownloadFailed')} ${chrome.runtime.lastError.message}`, 'error');
+        return;
+      }
+
+      if (res && res.success) {
+        showToast(t('updateDownloadSuccess'), 'success');
+        btnAcceptUpdate.classList.add('hidden');
+        if (btnReloadExtension) {
+          btnReloadExtension.classList.remove('hidden');
+        }
+      } else {
+        btnAcceptUpdate.disabled = false;
+        btnAcceptUpdate.textContent = t('btnAcceptUpdate');
+        showToast(`${t('updateDownloadFailed')} ${(res && res.error) || 'Unknown error'}`, 'error');
+      }
+    });
+  });
+}
+
+if (btnDismissUpdate) {
+  btnDismissUpdate.addEventListener('click', () => {
+    if (updateBanner) updateBanner.classList.add('hidden');
+    if (currentUpdateState && currentUpdateState.latestVersion) {
+      chrome.storage.local.set({ dismissedUpdateVersion: currentUpdateState.latestVersion });
+    }
+  });
+}
+
+if (btnReloadExtension) {
+  btnReloadExtension.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ action: 'RELOAD_EXTENSION' });
+  });
+}
+
 // Initial Data & Language Load
 loadData();
+

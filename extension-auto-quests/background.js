@@ -1132,8 +1132,122 @@ chrome.runtime.onConnect.addListener((port) => {
   }
 });
 
-// Chrome alarms listener: giữ Service Worker và phục hồi tiến trình nếu bị gián đoạn
+// ==========================================
+// GitHub Auto-Update & Version Check (v2.4)
+// ==========================================
+
+const GITHUB_RAW_PACKAGE_URL = 'https://raw.githubusercontent.com/PTK-2411/Discord-Auto-Quests/main/package.json';
+const GITHUB_RELEASE_API_URL = 'https://api.github.com/repos/PTK-2411/Discord-Auto-Quests/releases/latest';
+const GITHUB_REPO_URL = 'https://github.com/PTK-2411/Discord-Auto-Quests';
+const GITHUB_DOWNLOAD_ZIP_URL = 'https://github.com/PTK-2411/Discord-Auto-Quests/archive/refs/heads/main.zip';
+const UPDATE_CHECK_ALARM = 'UPDATE_CHECK_ALARM';
+
+function parseSemVer(versionStr) {
+  if (typeof versionStr !== 'string') return [0, 0, 0];
+  const cleaned = versionStr.trim().replace(/^[vV]/, '');
+  const parts = cleaned.split(/[-+]/)[0].split('.').map(n => parseInt(n, 10) || 0);
+  while (parts.length < 3) parts.push(0);
+  return parts.slice(0, 3);
+}
+
+function compareVersions(local, remote) {
+  const [lMajor, lMinor, lPatch] = parseSemVer(local);
+  const [rMajor, rMinor, rPatch] = parseSemVer(remote);
+
+  if (lMajor !== rMajor) return lMajor > rMajor ? 1 : -1;
+  if (lMinor !== rMinor) return lMinor > rMinor ? 1 : -1;
+  if (lPatch !== rPatch) return lPatch > rPatch ? 1 : -1;
+  return 0;
+}
+
+async function checkForUpdates() {
+  const currentVersion = (typeof chrome !== 'undefined' && chrome.runtime?.getManifest?.()?.version) || '2.4.0';
+  let latestVersion = null;
+
+  // 1. Fetch package.json from raw GitHub
+  try {
+    const res = await fetch(GITHUB_RAW_PACKAGE_URL, { cache: 'no-cache' });
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data && data.version) {
+        latestVersion = data.version;
+      }
+    }
+  } catch (err) {
+    console.warn('[AutoUpdate] Raw GitHub package fetch error:', err);
+  }
+
+  // 2. Fallback to GitHub Releases API
+  if (!latestVersion) {
+    try {
+      const res = await fetch(GITHUB_RELEASE_API_URL, {
+        headers: { 'Accept': 'application/vnd.github.v3+json' },
+        cache: 'no-cache'
+      });
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data && data.tag_name) {
+          latestVersion = data.tag_name.replace(/^[vV]/, '');
+        }
+      }
+    } catch (err) {
+      console.warn('[AutoUpdate] GitHub releases fallback error:', err);
+    }
+  }
+
+  if (!latestVersion) {
+    console.warn('[AutoUpdate] Failed to fetch latest version from GitHub.');
+    return { success: false, error: 'Failed to fetch latest version from GitHub' };
+  }
+
+  const isNewer = compareVersions(currentVersion, latestVersion) < 0;
+  const updateState = {
+    updateAvailable: isNewer,
+    latestVersion,
+    currentVersion,
+    downloadUrl: GITHUB_DOWNLOAD_ZIP_URL,
+    releaseUrl: GITHUB_REPO_URL,
+    checkedAt: Date.now()
+  };
+
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      await chrome.storage.local.set({ updateState });
+    }
+  } catch (err) {
+    console.warn('[AutoUpdate] Storage error saving updateState:', err);
+  }
+
+  if (isNewer) {
+    addLog(msg(
+      `🔔 A new version (v${latestVersion}) is available! Current: v${currentVersion}.`,
+      `🔔 Đã có phiên bản mới (v${latestVersion})! Bản hiện tại: v${currentVersion}.`
+    ), 'info');
+  }
+
+  broadcastMessage({ action: 'UPDATE_CHECK_RESULT', updateState });
+  return { success: true, updateState };
+}
+
+function setupUpdateAlarm() {
+  if (typeof chrome !== 'undefined' && chrome.alarms) {
+    try {
+      chrome.alarms.create(UPDATE_CHECK_ALARM, { periodInMinutes: 360 });
+    } catch (e) {
+      console.warn('[AutoUpdate] Alarms create error:', e);
+    }
+  }
+}
+
+// Chrome alarms listener: giữ Service Worker, kiểm tra update và phục hồi tiến trình nếu bị gián đoạn
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === UPDATE_CHECK_ALARM) {
+    checkForUpdates().catch(err => {
+      console.error('[Alarm] Auto-update check failed:', err);
+    });
+    return;
+  }
+
   if (alarm.name === 'quest_keep_alive' || alarm.name === 'quest_heartbeat_tick') {
     try {
       if (chrome.runtime.getPlatformInfo) {
@@ -1160,12 +1274,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 // Lắng nghe messages từ Popup UI hoặc Content Script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'GET_STATE') {
-    chrome.storage.local.get(['token', 'user', 'orbs', 'quests', 'logs', 'autoRunEnabled', 'runnerState']).then(data => {
+    chrome.storage.local.get(['token', 'user', 'orbs', 'quests', 'logs', 'autoRunEnabled', 'runnerState', 'updateState']).then(data => {
       sendResponse({
         token: data.token || null,
         user: data.user || null,
         quests: data.quests || [],
         logs: data.logs || [],
+        updateState: data.updateState || null,
         settings: {
           autoStart: data.autoRunEnabled !== false,
           autoClaim: true,
@@ -1373,12 +1488,83 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     return true;
   }
+
+  if (message.action === 'CHECK_UPDATE') {
+    checkForUpdates().then(result => {
+      sendResponse(result);
+    }).catch(err => {
+      sendResponse({ success: false, error: err.message });
+    });
+    return true;
+  }
+
+  if (message.action === 'DOWNLOAD_UPDATE') {
+    const version = message.version || 'latest';
+    const downloadUrl = message.url || GITHUB_DOWNLOAD_ZIP_URL;
+    const filename = `Discord-Auto-Quests-v${version}.zip`;
+
+    if (typeof chrome !== 'undefined' && chrome.downloads && chrome.downloads.download) {
+      try {
+        let responded = false;
+        const result = chrome.downloads.download({
+          url: downloadUrl,
+          filename: filename,
+          saveAs: false
+        }, (downloadId) => {
+          if (!responded) {
+            responded = true;
+            if (typeof chrome !== 'undefined' && chrome.runtime?.lastError) {
+              sendResponse({ success: false, error: chrome.runtime.lastError.message });
+            } else {
+              addLog(msg(`📥 Downloading update package: ${filename}...`, `📥 Đang tải gói cập nhật: ${filename}...`));
+              sendResponse({ success: true, downloadId, filename });
+            }
+          }
+        });
+
+        if (result && typeof result.then === 'function') {
+          result.then(downloadId => {
+            if (!responded) {
+              responded = true;
+              addLog(msg(`📥 Downloading update package: ${filename}...`, `📥 Đang tải gói cập nhật: ${filename}...`));
+              sendResponse({ success: true, downloadId, filename });
+            }
+          }).catch(err => {
+            if (!responded) {
+              responded = true;
+              sendResponse({ success: false, error: err.message });
+            }
+          });
+        }
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    } else {
+      sendResponse({ success: false, error: 'chrome.downloads API is not available' });
+    }
+    return true;
+  }
+
+  if (message.action === 'RELOAD_EXTENSION') {
+    sendResponse({ success: true });
+    if (typeof chrome !== 'undefined' && chrome.runtime?.reload) {
+      setTimeout(() => {
+        try {
+          chrome.runtime.reload();
+        } catch (e) {
+          console.warn('Extension reload error:', e);
+        }
+      }, 100);
+    }
+    return true;
+  }
 });
 
 // Khởi tạo thiết lập ban đầu
 chrome.runtime.onInstalled.addListener(async () => {
   await registerNetRules();
   setupPassiveTokenSniffer();
+  setupUpdateAlarm();
   const current = await chrome.storage.local.get(['autoRunEnabled', 'logs', 'runnerState']);
   if (current.autoRunEnabled === undefined) {
     await chrome.storage.local.set({
@@ -1391,11 +1577,13 @@ chrome.runtime.onInstalled.addListener(async () => {
   getOrExtractToken().then(t => {
     if (t) refreshDiscordData(t).catch(() => {});
   });
+  checkForUpdates().catch(() => {});
 });
 
 chrome.runtime.onStartup.addListener(async () => {
   await registerNetRules();
   setupPassiveTokenSniffer();
+  setupUpdateAlarm();
   const stored = await chrome.storage.local.get(['isRunning', 'runnerState', 'token']);
   if (stored.isRunning || stored.runnerState?.status === 'RUNNING') {
     await addLog(msg('🔄 Detected unfinished run after browser restart. Resuming...', '🔄 Phát hiện tiến trình chưa hoàn tất sau khi khởi động lại trình duyệt. Đang tiếp tục...'));
@@ -1407,4 +1595,5 @@ chrome.runtime.onStartup.addListener(async () => {
       if (t) refreshDiscordData(t).catch(() => {});
     });
   }
+  checkForUpdates().catch(() => {});
 });

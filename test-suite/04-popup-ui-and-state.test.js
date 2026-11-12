@@ -462,3 +462,164 @@ test('Tier 2 - F6: Logging Boundaries & Stress Resiliency', async (t) => {
     });
   });
 });
+
+test('Tier 1 & Tier 2 - F8: GitHub Auto-Update Engine & Popup Banner UI', async (t) => {
+  await t.test('T1.F8.1: compareVersions accurately parses and compares SemVer versions', () => {
+    const bg = createBackgroundSandbox();
+    const compare = bg.sandbox.compareVersions;
+
+    assert.equal(compare('2.3.0', '2.4.0'), -1, '2.3.0 < 2.4.0');
+    assert.equal(compare('2.4.0', '2.4.0'), 0, '2.4.0 === 2.4.0');
+    assert.equal(compare('2.4.1', '2.4.0'), 1, '2.4.1 > 2.4.0');
+    assert.equal(compare('v2.4.0', '2.4.1'), -1, 'v-prefix stripped');
+    assert.equal(compare('2.4', '2.4.0'), 0, 'shorthand 2.4 treated as 2.4.0');
+    assert.equal(compare('3.0.0', '2.9.9'), 1, 'major takes precedence');
+    assert.equal(compare('', '2.4.0'), -1, 'empty string handled safely');
+    assert.equal(compare(null, '2.4.0'), -1, 'null handled safely');
+  });
+
+  await t.test('T1.F8.2: checkForUpdates detects newer remote version and updates storage', async () => {
+    const bg = createBackgroundSandbox({
+      githubLatestVersion: '2.5.0'
+    });
+
+    const result = await bg.sandbox.checkForUpdates();
+    assert.equal(result.success, true);
+    assert.equal(result.updateState.updateAvailable, true);
+    assert.equal(result.updateState.latestVersion, '2.5.0');
+    assert.ok(result.updateState.downloadUrl.includes('archive/refs/heads/main.zip'));
+
+    const stored = await bg.storage.local.get('updateState');
+    assert.equal(stored.updateState.updateAvailable, true);
+    assert.equal(stored.updateState.latestVersion, '2.5.0');
+  });
+
+  await t.test('T1.F8.3: checkForUpdates reports no update when remote matches local', async () => {
+    const bg = createBackgroundSandbox({
+      githubLatestVersion: '2.4.0'
+    });
+
+    const result = await bg.sandbox.checkForUpdates();
+    assert.equal(result.success, true);
+    assert.equal(result.updateState.updateAvailable, false);
+    assert.equal(result.updateState.latestVersion, '2.4.0');
+  });
+
+  await t.test('T1.F8.4: Message CHECK_UPDATE triggers update check and responds to caller', async () => {
+    const bg = createBackgroundSandbox({
+      githubLatestVersion: '2.4.1'
+    });
+
+    const response = await bg.triggerMessage({ action: 'CHECK_UPDATE' });
+    assert.ok(response);
+    assert.equal(response.success, true);
+    assert.equal(response.updateState.updateAvailable, true);
+    assert.equal(response.updateState.latestVersion, '2.4.1');
+  });
+
+  await t.test('T1.F8.5: Message DOWNLOAD_UPDATE triggers chrome.downloads.download', async () => {
+    const bg = createBackgroundSandbox();
+
+    const response = await bg.triggerMessage({
+      action: 'DOWNLOAD_UPDATE',
+      version: '2.4.1',
+      url: 'https://github.com/PTK-2411/Discord-Auto-Quests/archive/refs/heads/main.zip'
+    });
+
+    assert.ok(response);
+    assert.equal(response.success, true);
+    assert.equal(bg.downloadsCalls.length, 1);
+    assert.equal(bg.downloadsCalls[0].filename, 'Discord-Auto-Quests-v2.4.1.zip');
+    assert.ok(bg.downloadsCalls[0].url.includes('archive/refs/heads/main.zip'));
+  });
+
+  await t.test('T1.F8.6: Message RELOAD_EXTENSION triggers chrome.runtime.reload', async () => {
+    const bg = createBackgroundSandbox();
+
+    const response = await bg.triggerMessage({ action: 'RELOAD_EXTENSION' });
+    assert.ok(response);
+    assert.equal(response.success, true);
+  });
+
+  await t.test('T2.F8.1: Popup renders update banner when updateState has updateAvailable', async () => {
+    const popup = createPopupSandbox();
+    const updateState = {
+      updateAvailable: true,
+      currentVersion: '2.4.0',
+      latestVersion: '2.5.0',
+      downloadUrl: 'https://github.com/PTK-2411/Discord-Auto-Quests/archive/refs/heads/main.zip'
+    };
+
+    popup.sandbox.renderUpdateBanner(updateState);
+    assert.equal(popup.elements.updateBanner.classList.contains('hidden'), false);
+    assert.ok(popup.elements.updateBannerVersion.textContent.includes('v2.4.0'));
+    assert.ok(popup.elements.updateBannerVersion.textContent.includes('v2.5.0'));
+  });
+
+  await t.test('T2.F8.2: Dismissing update banner hides it and stores dismissedUpdateVersion', async () => {
+    const sharedStorage = createStorage();
+    const bg = createBackgroundSandbox({ storage: sharedStorage });
+    const popup = createPopupSandbox({ storage: sharedStorage, background: bg });
+
+    const updateState = {
+      updateAvailable: true,
+      currentVersion: '2.4.0',
+      latestVersion: '2.5.0',
+      downloadUrl: 'https://github.com/PTK-2411/Discord-Auto-Quests/archive/refs/heads/main.zip'
+    };
+
+    popup.sandbox.renderUpdateBanner(updateState);
+    assert.equal(popup.elements.updateBanner.classList.contains('hidden'), false);
+
+    // Dismiss
+    popup.elements.btnDismissUpdate.dispatch('click');
+    assert.equal(popup.elements.updateBanner.classList.contains('hidden'), true);
+    await new Promise(r => setTimeout(r, 10));
+    const stored = await sharedStorage.local.get('dismissedUpdateVersion');
+    assert.equal(stored.dismissedUpdateVersion, '2.5.0');
+  });
+
+  await t.test('T2.F8.3: Accepting update in popup triggers download and reveals reload button', async () => {
+    const sharedStorage = createStorage();
+    const bg = createBackgroundSandbox({ storage: sharedStorage });
+    const popup = createPopupSandbox({ storage: sharedStorage, background: bg });
+
+    const updateState = {
+      updateAvailable: true,
+      currentVersion: '2.4.0',
+      latestVersion: '2.5.0',
+      downloadUrl: 'https://github.com/PTK-2411/Discord-Auto-Quests/archive/refs/heads/main.zip'
+    };
+
+    popup.sandbox.renderUpdateBanner(updateState);
+    popup.elements.btnAcceptUpdate.dispatch('click');
+
+    // Wait microtask for download handler
+    await new Promise(resolve => setTimeout(resolve, 20));
+
+    assert.equal(bg.downloadsCalls.length, 1);
+    assert.equal(popup.elements.btnAcceptUpdate.classList.contains('hidden'), true);
+    assert.equal(popup.elements.btnReloadExtension.classList.contains('hidden'), false);
+  });
+
+  await t.test('T2.F8.4: Language switch updates banner translations dynamically', async () => {
+    const popup = createPopupSandbox();
+    const updateState = {
+      updateAvailable: true,
+      currentVersion: '2.4.0',
+      latestVersion: '2.5.0',
+      downloadUrl: 'https://github.com/PTK-2411/Discord-Auto-Quests/archive/refs/heads/main.zip'
+    };
+
+    popup.sandbox.renderUpdateBanner(updateState);
+    popup.sandbox.setLanguage('vi');
+    assert.equal(popup.elements.updateBannerTitle.textContent, 'Có phiên bản mới!');
+    assert.equal(popup.elements.btnAcceptUpdate.textContent, 'Cập nhật ngay');
+    assert.equal(popup.elements.btnDismissUpdate.textContent, 'Để sau');
+
+    popup.sandbox.setLanguage('en');
+    assert.equal(popup.elements.updateBannerTitle.textContent, 'Update Available!');
+    assert.equal(popup.elements.btnAcceptUpdate.textContent, 'Update Now');
+    assert.equal(popup.elements.btnDismissUpdate.textContent, 'Later');
+  });
+});

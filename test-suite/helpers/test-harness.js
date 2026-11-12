@@ -117,11 +117,19 @@ function createMockDocument() {
     logConsole: createMockElement('logConsole', 'div'),
     statusIndicator: createMockElement('statusIndicator', 'span'),
     questsTab: createMockElement('questsTab', 'main'),
-    logsTab: createMockElement('logsTab', 'main')
+    logsTab: createMockElement('logsTab', 'main'),
+    updateBanner: createMockElement('updateBanner', 'div'),
+    updateBannerTitle: createMockElement('updateBannerTitle', 'div'),
+    updateBannerVersion: createMockElement('updateBannerVersion', 'div'),
+    updateBannerDesc: createMockElement('updateBannerDesc', 'div'),
+    btnAcceptUpdate: createMockElement('btnAcceptUpdate', 'button'),
+    btnDismissUpdate: createMockElement('btnDismissUpdate', 'button'),
+    btnReloadExtension: createMockElement('btnReloadExtension', 'button')
   };
 
   elements.userAvatar.src = 'icons/icon48.png';
   elements.autoRunToggle.checked = true;
+  elements.updateBanner.classList.add('hidden');
 
   const tabBtn1 = createMockElement('', 'button');
   tabBtn1.classList.add('tab-btn', 'active');
@@ -227,6 +235,27 @@ function createDiscordApiMock(options = {}) {
       return customHandlers[pathname](callRecord);
     }
 
+    // GitHub routes for update checks
+    if (parsedUrl.hostname === 'raw.githubusercontent.com') {
+      const packageData = options.githubPackageData || { version: options.githubLatestVersion || '2.4.0' };
+      return {
+        ok: options.githubRawOk !== false,
+        status: options.githubRawOk !== false ? 200 : 404,
+        json: async () => packageData,
+        text: async () => JSON.stringify(packageData)
+      };
+    }
+
+    if (parsedUrl.hostname === 'api.github.com' && parsedUrl.pathname.includes('/releases/latest')) {
+      const releaseData = options.githubReleaseData || { tag_name: `v${options.githubLatestVersion || '2.4.0'}` };
+      return {
+        ok: options.githubReleaseOk !== false,
+        status: options.githubReleaseOk !== false ? 200 : 404,
+        json: async () => releaseData,
+        text: async () => JSON.stringify(releaseData)
+      };
+    }
+
     // Default API routes
     if (pathname === '/users/@me' && method === 'GET') {
       if (options.unauthorized) {
@@ -328,11 +357,22 @@ function createBackgroundSandbox(options = {}) {
   const notifications = [];
   const dynamicRules = [];
 
+  const downloadsCalls = [];
+  const reloadCalls = [];
+
   const discordMock = options.discordMock || createDiscordApiMock(options);
 
   const chromeMock = {
     storage: storage,
     runtime: {
+      getManifest: () => ({
+        manifest_version: 3,
+        name: 'Discord Auto Quests',
+        version: options.manifestVersion || '2.4.0'
+      }),
+      reload: () => {
+        reloadCalls.push(Date.now());
+      },
       onMessage: {
         addListener: (fn) => messageListeners.push(fn)
       },
@@ -355,6 +395,14 @@ function createBackgroundSandbox(options = {}) {
         sentMessages.push(msg);
         if (options.onBroadcastMessage) options.onBroadcastMessage(msg);
       }
+    },
+    downloads: {
+      download: options.downloadsDownloadOverride || ((downloadOpts, callback) => {
+        downloadsCalls.push(downloadOpts);
+        const downloadId = 42;
+        if (callback) callback(downloadId);
+        return Promise.resolve(downloadId);
+      })
     },
     tabs: {
       onUpdated: {
@@ -436,6 +484,8 @@ function createBackgroundSandbox(options = {}) {
     badges,
     notifications,
     dynamicRules,
+    downloadsCalls,
+    reloadCalls,
     triggerTabUpdated: async (tabId, changeInfo, tab) => {
       for (const listener of tabUpdateListeners) {
         await listener(tabId, changeInfo, tab);
@@ -482,9 +532,23 @@ function createPopupSandbox(options = {}) {
   const background = options.background;
 
   const runtimeListeners = [];
+  const downloadsCalls = [];
+  const reloadCalls = [];
+
   const chromeMock = {
     storage: storage,
     runtime: {
+      getManifest: () => ({
+        manifest_version: 3,
+        name: 'Discord Auto Quests',
+        version: options.manifestVersion || '2.4.0'
+      }),
+      reload: () => {
+        reloadCalls.push(Date.now());
+        if (background && background.reloadCalls) {
+          background.reloadCalls.push(Date.now());
+        }
+      },
       sendMessage: (msg, callback) => {
         if (background) {
           background.triggerMessage(msg).then(res => {
@@ -503,6 +567,17 @@ function createPopupSandbox(options = {}) {
       onMessage: {
         addListener: (fn) => runtimeListeners.push(fn)
       }
+    },
+    downloads: {
+      download: options.downloadsDownloadOverride || ((downloadOpts, callback) => {
+        downloadsCalls.push(downloadOpts);
+        if (background && background.downloadsCalls) {
+          background.downloadsCalls.push(downloadOpts);
+        }
+        const downloadId = 42;
+        if (callback) callback(downloadId);
+        return Promise.resolve(downloadId);
+      })
     }
   };
 
@@ -525,6 +600,8 @@ function createPopupSandbox(options = {}) {
     doc,
     elements: doc.elements,
     alerts,
+    downloadsCalls,
+    reloadCalls,
     runtimeListeners,
     dispatchRuntimeMessage: (msg) => {
       runtimeListeners.forEach(l => l(msg));
