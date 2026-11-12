@@ -1004,8 +1004,10 @@ if (saveTokenBtn && tokenInput) {
 // 5b. Copy Token to Clipboard with Fallback
 async function copyTokenToClipboard() {
   let token = currentToken;
-  if (!token && tokenInput && tokenInput.value && tokenInput.value.trim()) {
-    token = tokenInput.value.trim();
+  if (tokenInput && tokenInput.value && tokenInput.value.trim()) {
+    if (!token || (tokenInputRow && !tokenInputRow.classList.contains('hidden'))) {
+      token = tokenInput.value.trim();
+    }
   }
   if (!token && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     try {
@@ -1039,8 +1041,9 @@ async function copyTokenToClipboard() {
   }
 
   if (!copied && typeof document !== 'undefined') {
+    let textarea;
     try {
-      const textarea = document.createElement('textarea');
+      textarea = document.createElement('textarea');
       textarea.value = token;
       textarea.style.position = 'fixed';
       textarea.style.top = '0';
@@ -1050,12 +1053,22 @@ async function copyTokenToClipboard() {
         document.body.appendChild(textarea);
         if (typeof textarea.focus === 'function') textarea.focus();
         if (typeof textarea.select === 'function') textarea.select();
-        copied = document.execCommand ? document.execCommand('copy') : false;
-        document.body.removeChild(textarea);
+        copied = Boolean(document.execCommand && document.execCommand('copy'));
       }
     } catch (e) {
       console.warn('Fallback copy error:', e);
+    } finally {
+      if (textarea && document.body && typeof document.body.removeChild === 'function') {
+        try {
+          document.body.removeChild(textarea);
+        } catch (_) {}
+      }
     }
+  }
+
+  if (!copied) {
+    showToast(t('toastCopyFailed'), 'error');
+    return false;
   }
 
   showToast(t('toastTokenCopied'), 'success');

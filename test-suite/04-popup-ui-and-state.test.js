@@ -738,5 +738,18 @@ test('Tier 1 & Tier 2 - F9: Token Copy to Clipboard & UI State (v2.4.1)', async 
     await popup.sandbox.copyTokenToClipboard();
     assert.equal(popup.elements.toast.textContent, '✔ Token copied to clipboard!');
   });
+
+  await t.test('T2.F9.5: Displays error toast and returns false when both clipboard.writeText and execCommand fail', async () => {
+    const popup = createPopupSandbox({
+      initialStorage: { token: 'unwritable-token' },
+      clipboardError: true,
+      execCommandFail: true
+    });
+
+    const result = await popup.sandbox.copyTokenToClipboard();
+    assert.equal(result, false);
+    assert.equal(popup.elements.toast.textContent, 'Failed to copy token to clipboard.');
+    assert.ok(popup.elements.toast.className.includes('error'));
+  });
 });
 

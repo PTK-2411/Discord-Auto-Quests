@@ -107,7 +107,7 @@ function createMockElement(id = '', tag = 'div') {
 /**
  * Creates a mock document tree populated with elements matching popup.html
  */
-function createMockDocument() {
+function createMockDocument(options = {}) {
   const elements = {
     autoRunToggle: createMockElement('autoRunToggle', 'input'),
     userAvatar: createMockElement('userAvatar', 'img'),
@@ -166,7 +166,10 @@ function createMockDocument() {
   const doc = {
     elements,
     body: createMockElement('body', 'body'),
-    execCommand: (cmd) => true,
+    execCommand: options.execCommand || ((cmd) => {
+      if (options.execCommandCalls) options.execCommandCalls.push(cmd);
+      return options.execCommandFail ? false : true;
+    }),
     tabButtons: [tabBtn1, tabBtn2],
     tabContents: [elements.questsTab, elements.logsTab],
     getElementById: (id) => {
@@ -552,7 +555,8 @@ function createBackgroundSandbox(options = {}) {
  * Creates the Popup VM execution environment for extension-auto-quests
  */
 function createPopupSandbox(options = {}) {
-  const doc = createMockDocument();
+  const execCommandCalls = [];
+  const doc = options.doc || createMockDocument({ ...options, execCommandCalls });
   const storage = options.storage || createStorage(options.initialStorage || {});
   const alerts = [];
   const background = options.background;
@@ -640,6 +644,7 @@ function createPopupSandbox(options = {}) {
     elements: doc.elements,
     alerts,
     clipboardWrites,
+    execCommandCalls,
     downloadsCalls,
     reloadCalls,
     runtimeListeners,
